@@ -2596,12 +2596,7 @@
                         ctx.shadowColor = 'transparent';
                         ctx.drawImage(appState.originalImage, imgX, imgY, drawW, drawH);
                         
-                        // Draw sticker border
-                        ctx.beginPath();
-                        ctx.arc(centerX, centerY, stickerSize / 2, 0, 2 * Math.PI);
-                        ctx.strokeStyle = '#e2e8f0';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
+                        // Circle border removed - stickers now have clean edges
                     }
                 }
                 
