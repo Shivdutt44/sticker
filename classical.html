@@ -2604,108 +2604,82 @@
                 totalStickersValue.textContent = cols * rows;
             }
             
-            // Generate sticker sheet for download
+            // Generate sticker sheet for download - exact preview copy
             function generateStickerSheet() {
                 try {
                     showNotification('Generating Sticker Sheet', 'Creating high-quality sticker sheet for download', 'info');
                     
-                    // Create a high-resolution canvas for the sticker sheet
+                    // First, capture the current preview canvas content
+                    // Create a high-resolution version by scaling up the current canvas
+                    const previewCanvas = canvas;
+                    const previewCtx = previewCanvas.getContext('2d');
+                    
+                    // Calculate scale factor for high resolution (300 DPI)
+                    const dpi = 300;
+                    const previewWidth = previewCanvas.width;
+                    const previewHeight = previewCanvas.height;
+                    
+                    // Create high-resolution canvas
                     const sheetCanvas = document.createElement('canvas');
                     const sheetCtx = sheetCanvas.getContext('2d');
                     
-                    // Set canvas size based on board dimensions (in pixels at 300 DPI)
-                    const dpi = 300;
-                    const inchesPerCm = 0.393701;
-                    const boardWidthPx = Math.round(appState.boardSize.width * inchesPerCm * dpi);
-                    const boardHeightPx = Math.round(appState.boardSize.height * inchesPerCm * dpi);
+                    // Set canvas size - scale up proportionally
+                    const scaleFactor = 4; // 4x resolution for print quality
+                    sheetCanvas.width = previewWidth * scaleFactor;
+                    sheetCanvas.height = previewHeight * scaleFactor;
                     
-                    sheetCanvas.width = boardWidthPx;
-                    sheetCanvas.height = boardHeightPx;
+                    // Set high-quality scaling
+                    sheetCtx.imageSmoothingEnabled = true;
+                    sheetCtx.imageSmoothingQuality = 'high';
                     
-                    // White background
+                    // Fill background with white (card background)
                     sheetCtx.fillStyle = '#ffffff';
-                    sheetCtx.fillRect(0, 0, boardWidthPx, boardHeightPx);
+                    sheetCtx.fillRect(0, 0, sheetCanvas.width, sheetCanvas.height);
                     
-                    // Calculate sticker size in pixels
-                    const stickerDiameterPx = Math.round(appState.stickerDiameter * inchesPerCm * dpi);
-                    const gapPx = Math.round(0.5 * inchesPerCm * dpi); // 0.5cm gap
+                    // Copy the exact preview content scaled up
+                    sheetCtx.drawImage(previewCanvas, 0, 0, previewWidth, previewHeight, 0, 0, sheetCanvas.width, sheetCanvas.height);
                     
-                    // Calculate grid layout
+                    // Add subtle border to match preview card style
+                    sheetCtx.strokeStyle = '#e2e8f0';
+                    sheetCtx.lineWidth = 2 * scaleFactor;
+                    sheetCtx.strokeRect(0, 0, sheetCanvas.width, sheetCanvas.height);
+                    
+                    // Add a subtle shadow effect around the edges
+                    sheetCtx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+                    sheetCtx.shadowBlur = 10 * scaleFactor;
+                    sheetCtx.shadowOffsetX = 0;
+                    sheetCtx.shadowOffsetY = 5 * scaleFactor;
+                    
+                    // Add a drop shadow around the entire card
+                    sheetCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                    sheetCtx.lineWidth = 1 * scaleFactor;
+                    sheetCtx.strokeRect(-5 * scaleFactor, -5 * scaleFactor, sheetCanvas.width + 10 * scaleFactor, sheetCanvas.height + 10 * scaleFactor);
+                    
+                    // Reset shadow
+                    sheetCtx.shadowColor = 'transparent';
+                    
+                    // Add text information at the bottom (scaled up)
+                    sheetCtx.fillStyle = '#666666';
+                    sheetCtx.font = `${12 * scaleFactor}px Inter, sans-serif`;
+                    sheetCtx.textAlign = 'center';
                     const cols = appState.grid.horizontal;
                     const rows = appState.grid.vertical;
-                    
-                    // Calculate starting position to center the grid
-                    const totalWidth = cols * stickerDiameterPx + (cols - 1) * gapPx;
-                    const totalHeight = rows * stickerDiameterPx + (rows - 1) * gapPx;
-                    const startX = (boardWidthPx - totalWidth) / 2;
-                    const startY = (boardHeightPx - totalHeight) / 2;
-                    
-                    // Create a temporary canvas for each sticker
-                    const stickerCanvas = document.createElement('canvas');
-                    const stickerCtx = stickerCanvas.getContext('2d');
-                    stickerCanvas.width = stickerDiameterPx + 100; // Padding for outline
-                    stickerCanvas.height = stickerDiameterPx + 100;
-                    
-                    // Draw each sticker
-                    for (let row = 0; row < rows; row++) {
-                        for (let col = 0; col < cols; col++) {
-                            const x = startX + col * (stickerDiameterPx + gapPx);
-                            const y = startY + row * (stickerDiameterPx + gapPx);
-                            
-                            // Clear sticker canvas
-                            stickerCtx.clearRect(0, 0, stickerCanvas.width, stickerCanvas.height);
-                            
-                            // Draw the sticker with outline
-                            drawStickerOnCanvas(stickerCtx, stickerCanvas.width, stickerCanvas.height, stickerDiameterPx);
-                            
-                            // Draw the sticker onto the sheet
-                            sheetCtx.drawImage(stickerCanvas, x, y, stickerDiameterPx, stickerDiameterPx);
-                        }
-                    }
-                    
-                    // Add cut lines and registration marks
-                    sheetCtx.strokeStyle = '#cccccc';
-                    sheetCtx.lineWidth = 1;
-                    sheetCtx.setLineDash([5, 5]);
-                    
-                    for (let row = 0; row <= rows; row++) {
-                        const y = startY + row * (stickerDiameterPx + gapPx) - gapPx/2;
-                        sheetCtx.beginPath();
-                        sheetCtx.moveTo(startX - 10, y);
-                        sheetCtx.lineTo(startX + totalWidth + 10, y);
-                        sheetCtx.stroke();
-                    }
-                    
-                    for (let col = 0; col <= cols; col++) {
-                        const x = startX + col * (stickerDiameterPx + gapPx) - gapPx/2;
-                        sheetCtx.beginPath();
-                        sheetCtx.moveTo(x, startY - 10);
-                        sheetCtx.lineTo(x, startY + totalHeight + 10);
-                        sheetCtx.stroke();
-                    }
-                    
-                    sheetCtx.setLineDash([]);
-                    
-                    // Add information text
-                    sheetCtx.fillStyle = '#666666';
-                    sheetCtx.font = '12px Inter, sans-serif';
-                    sheetCtx.textAlign = 'center';
                     const infoText = `Board: ${appState.boardSize.width}×${appState.boardSize.height}cm | Stickers: ${cols}×${rows} | Diameter: ${appState.stickerDiameter}cm`;
-                    sheetCtx.fillText(infoText, boardWidthPx / 2, boardHeightPx - 20);
+                    sheetCtx.fillText(infoText, sheetCanvas.width / 2, sheetCanvas.height - 20 * scaleFactor);
                     
                     // Convert canvas to blob and download
                     sheetCanvas.toBlob(function(blob) {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `sticker-sheet-${appState.boardSize.width}x${appState.boardSize.height}cm-${cols}x${rows}.png`;
+                        a.download = `sticker-preview-${appState.boardSize.width}x${appState.boardSize.height}cm-${cols}x${rows}-highres.png`;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
                         
                         setTimeout(() => {
-                            showNotification('Download Complete', 'Your sticker sheet has been downloaded', 'success');
+                            showNotification('Download Complete', 'Your high-resolution sticker preview has been downloaded', 'success');
                         }, 500);
                     }, 'image/png', 1.0);
                     
@@ -2713,106 +2687,6 @@
                     console.error('Download error:', error);
                     showNotification('Download Failed', 'There was an error generating your sticker sheet', 'error');
                 }
-            }
-            
-            // Draw a single sticker on a canvas
-            function drawStickerOnCanvas(ctx, width, height, stickerSize) {
-                if (!appState.originalImage) return;
-                
-                // Clear canvas
-                ctx.clearRect(0, 0, width, height);
-                
-                const outlineWidth = appState.outlineEnabled ? appState.outline.width * 3 : 0; // Scale for high DPI
-                const outlineColor = appState.outline.color;
-                const smooth = appState.outline.smoothing;
-                
-                // Calculate image position
-                const scale = stickerSize / Math.max(appState.originalImage.width, appState.originalImage.height);
-                const drawW = appState.originalImage.width * scale;
-                const drawH = appState.originalImage.height * scale;
-                const offsetX = (width - drawW) / 2;
-                const offsetY = (height - drawH) / 2;
-                
-                // Create a temporary canvas for outline processing
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-                const tempCtx = tempCanvas.getContext('2d');
-                
-                // Draw image on temp canvas
-                tempCtx.drawImage(appState.originalImage, offsetX, offsetY, drawW, drawH);
-                
-                if (outlineWidth > 0) {
-                    // Apply distance transform for outline
-                    const imageData = tempCtx.getImageData(0, 0, width, height);
-                    const data = imageData.data;
-                    const distMap = new Float32Array(width * height);
-                    const INF = 1e9;
-                    
-                    // Initialize
-                    for (let i = 0; i < width * height; i++) {
-                        if (data[i * 4 + 3] > 10) {
-                            distMap[i] = 0;
-                        } else {
-                            distMap[i] = INF;
-                        }
-                    }
-                    
-                    // Two-pass distance transform
-                    for (let y = 0; y < height; y++) {
-                        for (let x = 0; x < width; x++) {
-                            const idx = y * width + x;
-                            if (distMap[idx] === 0) continue;
-                            let min = distMap[idx];
-                            if (x > 0) min = Math.min(min, distMap[idx - 1] + 1);
-                            if (y > 0) {
-                                min = Math.min(min, distMap[idx - width] + 1);
-                                if (x > 0) min = Math.min(min, distMap[idx - width - 1] + 1.414);
-                                if (x < width - 1) min = Math.min(min, distMap[idx - width + 1] + 1.414);
-                            }
-                            distMap[idx] = min;
-                        }
-                    }
-                    
-                    for (let y = height - 1; y >= 0; y--) {
-                        for (let x = width - 1; x >= 0; x--) {
-                            const idx = y * width + x;
-                            if (distMap[idx] === 0) continue;
-                            let min = distMap[idx];
-                            if (x < width - 1) min = Math.min(min, distMap[idx + 1] + 1);
-                            if (y < height - 1) {
-                                min = Math.min(min, distMap[idx + width] + 1);
-                                if (x < width - 1) min = Math.min(min, distMap[idx + width + 1] + 1.414);
-                                if (x > 0) min = Math.min(min, distMap[idx + width - 1] + 1.414);
-                            }
-                            distMap[idx] = min;
-                        }
-                    }
-                    
-                    // Draw outline
-                    const [r, g, b] = hexToRgb(outlineColor);
-                    const resultData = ctx.createImageData(width, height);
-                    const res = resultData.data;
-                    
-                    for (let i = 0; i < width * height; i++) {
-                        const dist = distMap[i];
-                        if (dist <= outlineWidth) {
-                            let alpha = 255;
-                            if (smooth && dist > outlineWidth - 1) {
-                                alpha = 255 * (1 - (dist - (outlineWidth - 1)));
-                            }
-                            res[i * 4] = r;
-                            res[i * 4 + 1] = g;
-                            res[i * 4 + 2] = b;
-                            res[i * 4 + 3] = alpha;
-                        }
-                    }
-                    
-                    ctx.putImageData(resultData, 0, 0);
-                }
-                
-                // Draw image on top
-                ctx.drawImage(appState.originalImage, offsetX, offsetY, drawW, drawH);
             }
             
             // Convert hex color to RGB
